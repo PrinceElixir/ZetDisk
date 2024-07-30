@@ -19,5 +19,8 @@ func Setup(app *fiber.App) {
 
     protected.Get("/", controllers.Protected)
     protected.Post("/rooms", controllers.CreateRoom)
-    protected.Post("/contents", controllers.AddContent)
+    // protected.Post("/contents", controllers.UploadContent)
+    protected.Post("/upload/initiate", controllers.InitiateUpload)
+    protected.Get("/upload/url", controllers.GetUploadURL)
+    protected.Post("/upload/complete", controllers.CompleteUpload)
 }

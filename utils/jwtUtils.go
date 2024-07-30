@@ -9,4 +9,4 @@ type JWTClaims struct {
     jwt.StandardClaims
 }
 
-var JWTSecret = []byte("your_jwt_secret_key")
+var JWTSecret = []byte("kCMsWstIhJRGsnRSo1FkqSvZrbgt_WMOnb4i5Gb9AXo-")

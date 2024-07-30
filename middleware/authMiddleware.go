@@ -10,7 +10,7 @@ func JWTProtected() fiber.Handler {
     return func(c *fiber.Ctx) error {
         tokenString := c.Get("Authorization")
         if tokenString == "" {
-            return c.Status(fiber.StatusUnauthorized).SendString("Missing or malformed JWT")
+            return c.Status(fiber.StatusUnauthorized).JSON("Missing or malformed JWT")
         }
 
         claims := &utils.JWTClaims{}
@@ -19,7 +19,7 @@ func JWTProtected() fiber.Handler {
         })
 
         if err != nil || !token.Valid {
-            return c.Status(fiber.StatusUnauthorized).SendString("Invalid or expired JWT")
+            return c.Status(fiber.StatusUnauthorized).JSON("Invalid or expired JWT")
         }
 
         c.Locals("user", claims.UserID)

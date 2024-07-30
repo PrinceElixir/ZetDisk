@@ -16,35 +16,41 @@ func CreateRoom(c *fiber.Ctx) error {
 
     room := new(models.Room)
     if err := c.BodyParser(room); err != nil {
-        return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": err.Error(),
+        })
     }
 
-   
     if room.Name == "" {
-        return c.Status(fiber.StatusBadRequest).SendString("Room name is required")
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Room name is required",
+        })
     }
 
-    
     userCollection := config.GetMongoCollection("users")
     var dbUser models.User
     err := userCollection.FindOne(context.TODO(), bson.M{"_id": userID}).Decode(&dbUser)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to fetch user")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to fetch user",
+        })
     }
 
     roomCollection := config.GetMongoCollection("rooms")
     var roomCount int64
     roomCount, err = roomCollection.CountDocuments(context.TODO(), bson.M{"user_id": userID})
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to count rooms")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to count rooms",
+        })
     }
 
-   
     if dbUser.FreeVersion && roomCount >= 5 {
-        return c.Status(fiber.StatusForbidden).SendString("Free version users can create a maximum of 5 rooms")
+        return c.Status(fiber.StatusForbidden).JSON(fiber.Map{
+            "error": "Free version users can create a maximum of 5 rooms",
+        })
     }
 
-   
     room.ID = primitive.NewObjectID()
     room.UserID = userID
     room.UsedMemory = 0
@@ -53,7 +59,9 @@ func CreateRoom(c *fiber.Ctx) error {
 
     _, err = roomCollection.InsertOne(context.TODO(), room)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to create room")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to create room",
+        })
     }
 
     return c.JSON(room)

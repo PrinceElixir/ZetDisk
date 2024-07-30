@@ -2,17 +2,17 @@ package controllers
 
 import (
     "context"
+    "encoding/json"
     "filestorage-backend/config"
     "filestorage-backend/models"
     "filestorage-backend/utils"
     "github.com/gofiber/fiber/v2"
-    "golang.org/x/crypto/bcrypt"
     "go.mongodb.org/mongo-driver/bson"
     "go.mongodb.org/mongo-driver/mongo"
+    "golang.org/x/crypto/bcrypt"
     "golang.org/x/oauth2"
     "golang.org/x/oauth2/google"
     "net/http"
-    "encoding/json"
 )
 
 var (
@@ -33,37 +33,44 @@ func hashPassword(password string) (string, error) {
 func Register(c *fiber.Ctx) error {
     user := new(models.User)
     if err := c.BodyParser(user); err != nil {
-        return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": err.Error(),
+        })
     }
 
-    
     if user.Email == "" || user.Name == "" || user.Password == "" {
-        return c.Status(fiber.StatusBadRequest).SendString("Email, Name, and Password cannot be empty")
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "Email, Name, and Password cannot be empty",
+        })
     }
 
-    
     collection := config.GetMongoCollection("users")
     var existingUser models.User
     err := collection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&existingUser)
     if err == nil {
-        return c.Status(fiber.StatusBadRequest).SendString("User already exists")
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": "User already exists",
+        })
     } else if err != mongo.ErrNoDocuments {
-        return c.Status(fiber.StatusInternalServerError).SendString("Error checking for existing user")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Error checking for existing user",
+        })
     }
 
-    
     hashedPassword, err := hashPassword(user.Password)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to hash password")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to hash password",
+        })
     }
     user.Password = hashedPassword
-
-   
     user.FreeVersion = true
 
     _, err = collection.InsertOne(context.TODO(), user)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString(err.Error())
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": err.Error(),
+        })
     }
 
     return c.JSON(user)
@@ -72,24 +79,32 @@ func Register(c *fiber.Ctx) error {
 func Login(c *fiber.Ctx) error {
     user := new(models.User)
     if err := c.BodyParser(user); err != nil {
-        return c.Status(fiber.StatusBadRequest).SendString(err.Error())
+        return c.Status(fiber.StatusBadRequest).JSON(fiber.Map{
+            "error": err.Error(),
+        })
     }
 
     storedUser := new(models.User)
     collection := config.GetMongoCollection("users")
-    err := collection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(&storedUser)
+    err := collection.FindOne(context.TODO(), bson.M{"email": user.Email}).Decode(storedUser)
     if err != nil {
-        return c.Status(fiber.StatusUnauthorized).SendString("Invalid credentials")
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "error": "Invalid credentials",
+        })
     }
 
     err = bcrypt.CompareHashAndPassword([]byte(storedUser.Password), []byte(user.Password))
     if err != nil {
-        return c.Status(fiber.StatusUnauthorized).SendString("Invalid credentials")
+        return c.Status(fiber.StatusUnauthorized).JSON(fiber.Map{
+            "error": "Invalid credentials",
+        })
     }
 
     token, err := utils.GenerateJWT(storedUser.Email)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to generate JWT")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to generate JWT",
+        })
     }
 
     return c.JSON(fiber.Map{"token": token})
@@ -104,18 +119,24 @@ func GoogleCallback(c *fiber.Ctx) error {
     code := c.Query("code")
     token, err := oauthConfig.Exchange(context.Background(), code)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to exchange token")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to exchange token",
+        })
     }
 
     resp, err := http.Get("https://www.googleapis.com/oauth2/v2/userinfo?access_token=" + token.AccessToken)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to get user info")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to get user info",
+        })
     }
     defer resp.Body.Close()
 
     var userInfo map[string]interface{}
     if err := json.NewDecoder(resp.Body).Decode(&userInfo); err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to decode user info")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to decode user info",
+        })
     }
 
     email := userInfo["email"].(string)
@@ -130,13 +151,17 @@ func GoogleCallback(c *fiber.Ctx) error {
         user.FreeVersion = true
         _, err = collection.InsertOne(context.TODO(), user)
         if err != nil {
-            return c.Status(fiber.StatusInternalServerError).SendString("Failed to create user")
+            return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+                "error": "Failed to create user",
+            })
         }
     }
 
     jwtToken, err := utils.GenerateJWT(email)
     if err != nil {
-        return c.Status(fiber.StatusInternalServerError).SendString("Failed to generate JWT")
+        return c.Status(fiber.StatusInternalServerError).JSON(fiber.Map{
+            "error": "Failed to generate JWT",
+        })
     }
 
     return c.JSON(fiber.Map{"token": jwtToken})
@@ -144,5 +169,5 @@ func GoogleCallback(c *fiber.Ctx) error {
 
 func Protected(c *fiber.Ctx) error {
     user := c.Locals("user").(string)
-    return c.SendString("Hello, " + user)
+    return c.JSON(fiber.Map{"message": "Hello, " + user})
 }
