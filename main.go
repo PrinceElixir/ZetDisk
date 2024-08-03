@@ -3,9 +3,11 @@ package main
 import (
     "filestorage-backend/config"
     "filestorage-backend/routes"
+    "filestorage-backend/utils"
     "github.com/gofiber/fiber/v2"
     "github.com/joho/godotenv"
     "log"
+    
 )
 
 func main() {
@@ -13,6 +15,8 @@ func main() {
     if err != nil {
         log.Fatal("Error loading .env file")
     }
+
+    utils.InitRedis()
 
     config.LoadConfig()
 

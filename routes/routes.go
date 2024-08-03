@@ -11,6 +11,9 @@ func Setup(app *fiber.App) {
 
     api.Post("/register", controllers.Register)
     api.Post("/login", controllers.Login)
+    api.Post("/password/reset/request", controllers.RequestPasswordReset)
+    api.Post("/password/reset/verify", controllers.VerifyOTP)
+    api.Post("/password/reset", controllers.ResetPassword)
 
     api.Get("/auth/google", controllers.GoogleLogin)
     api.Get("/auth/google/callback", controllers.GoogleCallback)
