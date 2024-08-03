@@ -23,7 +23,7 @@ func SendOTPEmail(email, otp string) error {
 
 func SendEmail(to, subject, body string) error {
     sess, err := session.NewSession(&aws.Config{
-        Region: aws.String("us-east-1"), // Change to your AWS region
+        Region: aws.String("ap-south-1"), // change the aws resion 
     })
     if err != nil {
         log.Println("Failed to create AWS session:", err)
